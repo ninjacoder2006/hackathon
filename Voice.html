@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Enhanced Speech Recognition</title>
+    <style>
+        #output {
+            min-height: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button id="start">Start Recognition</button>
+    <button id="end">Stop Recognition</button>
+    <div id="output"></div>
+    <script>
+        const output = document.getElementById('output');
+        let recognition;
+        let isRecognizing = false;
+        let finalTranscript = '';
+        
+        function resetRecognition() {
+            if (recognition) {
+                recognition.stop();
+            }
+            finalTranscript = '';
+            output.textContent = '';
+            isRecognizing = false;
+        }
+        
+        function startRecognition() {
+            if (isRecognizing) return;
+            
+            resetRecognition();
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            recognition.lang = 'en';
+            
+            recognition.onstart = () => isRecognizing = true;
+            
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Update the output with both final and interim results
+                output.innerHTML = finalTranscript + (interimTranscript ? `<i style="color:#666;">${interimTranscript}</i>` : '');
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Recognition error:', event.error);
+                if (event.error === 'no-speech') {
+                    output.innerHTML = finalTranscript + '<i style="color:red;">No speech detected</i>';
+                }
+            };
+            
+            recognition.onend = () => isRecognizing && recognition.start();
+            
+            recognition.start();
+        }
+        
+        function stopRecognition() {
+            isRecognizing = false;
+            recognition && recognition.stop();
+            return finalTranscript.trim();
+        }
+        
+        document.getElementById('start').addEventListener('click', startRecognition);
+        document.getElementById('end').addEventListener('click', stopRecognition);
+    </script>
+</body>
+</html>
